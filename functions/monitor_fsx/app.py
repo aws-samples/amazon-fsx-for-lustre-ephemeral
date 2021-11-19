@@ -2,20 +2,20 @@ import os
 import boto3
 from datetime import datetime, timedelta
 
-# Get all external configurable external variables
-PERIOD = int(os.environ['data_points_period_secs'])
-MERTIC_INTERVAL = int(os.environ['metric_interval_mins'])
-SNS_TOPIC = os.environ.get('sns_arn')
-EVENT_NAME_PREFIX = os.environ.get('event_name_prefix')
-CLAIMED_TIME_MINS = int(os.environ.get('claimed_time_mins'))
+# -- Get all external configurable external variables --
+PERIOD = int(os.environ['DATA_POINTS_PERIOD_SECS'])
+MERTIC_INTERVAL = int(os.environ['METRIC_INTERVAL_MINS'])
+SNS_TOPIC = os.environ.get('SNS_ARN')
+EVENT_NAME_PREFIX = os.environ.get('EVENT_NAME_PREFIX')
+CLAIMED_TIME_MINS = int(os.environ.get('CLAIMED_TIME_MINS'))
 
-# Get all the clients needed
+# -- Get all the clients needed --
 cw_client = boto3.client('cloudwatch')
 event_client = boto3.client('events')
 fsx_client = boto3.client('fsx')
 
 
-# Get all available file systems based on the specified tags
+# -- Get all available file systems based on the specified tags --
 def get_filesystems():
     rsc_tag_client = boto3.client('resourcegroupstaggingapi')
     fsx_paginator = rsc_tag_client.get_paginator('get_resources')
@@ -49,7 +49,7 @@ def get_filesystems():
         return fs_list
 
 
-# Calculate the time from FSx creation.
+# -- Calculate the time from FSx creation. --
 def get_minutes_elapsed_since_creation(storage):
     response = fsx_client.describe_file_systems(
         FileSystemIds=[
@@ -67,18 +67,17 @@ def get_minutes_elapsed_since_creation(storage):
     return mins
 
 
-# Get file system lifecyle state. We are looking for Available file systems.
+# -- Get file system lifecyle state. We are looking for Available file systems. --
 def get_storage_lifecycle(storage):
     response = fsx_client.describe_file_systems(
         FileSystemIds=[
             storage,
         ],
     )
-
     return response['FileSystems'][0]['Lifecycle']
 
 
-# get the amount of minutes the file system has been claimed
+# -- get the amount of minutes the file system has been claimed --
 def get_claim_time_in_minutes(storage):
     claimed_time_string = ""
     response = fsx_client.describe_file_systems(
@@ -90,11 +89,11 @@ def get_claim_time_in_minutes(storage):
     for tag in response['FileSystems'][0]['Tags']:
         if tag["Key"] == "ClaimedAt":
             claimed_time_string = tag["Value"]
-            # print(claimed_time_string)
+            # -- print(claimed_time_string)
 
     if claimed_time_string != "":
         time_now = datetime.strptime(str(datetime.now()), '%Y-%m-%d %H:%M:%S.%f')
-        # print(time_now)
+        # -- print(time_now)
         claimed_time = datetime.strptime(claimed_time_string, '%Y-%m-%d %H:%M:%S.%f')
         diff_minutes = (time_now - claimed_time).total_seconds() / 60
         print("Claim Time Diff: " + str(diff_minutes))
@@ -115,7 +114,7 @@ def send_email(storage, uptime):
     )
 
 
-# Main lambda controller.
+# -- Main lambda controller. --
 def lambda_handler(event, context):
     print("Received Event: {}".format(event))
     
@@ -202,24 +201,24 @@ def lambda_handler(event, context):
                 EndTime=end_time
             )
 
-            #  Determine total IOPs
+            # --  Determine total IOPs --
             average_iops = 0
             total_iops_values = response['MetricDataResults'][0]['Values']
             if total_iops_values:
                 average_iops = sum(total_iops_values) / len(total_iops_values)
 
-            # Initiate a delete when average IOPS is 0.
+            # -- Initiate a delete when average IOPS is 0. --
             print("Average IOPS for this check is: {}".format(average_iops))
-            if average_iops >= 0.40:  # 0.35 is average threashold when FSx is not being used.
+            if average_iops >= 0.40:  # -- 0.35 is average threashold when FSx is not being used. --
                 pass
             else:
-                # Get total uptime for running FSx
+                # -- Get total uptime for running FSx --
                 uptime = get_minutes_elapsed_since_creation(storage)
 
                 print("Deleting FSx: {}".format(storage))
                 response = fsx_client.delete_file_system(FileSystemId=storage)
 
-                # Send message to SNS topic
+                # -- Send message to SNS topic --
                 send_email(storage, uptime)
 
     storage_list = get_filesystems()
@@ -227,7 +226,7 @@ def lambda_handler(event, context):
         print("File systems still exists={}".format(str(storage_list)))
         pass
     else:
-        # Get all the event rules for the prefix
+        # -- Get all the event rules for the prefix --
         response = event_client.list_rules(
             NamePrefix=EVENT_NAME_PREFIX,
             Limit=1

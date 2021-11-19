@@ -18,15 +18,12 @@ def lambda_handler(event, context):
         print(event)
         operation           = event["operation"]
         
-        # create file system
         if operation == "create":
             return create_file_system(event)
         
-        # return status
         if operation == "status":
             return get_status(event)
         
-        # delete file system
         if operation == "delete":
             return delete_file_system(event)
 
@@ -34,7 +31,6 @@ def lambda_handler(event, context):
         print(e)
         raise e
 
-# Method to create a file system
 def create_file_system(event):
     # Get subnet IDs from environment variables
     subnet              = random.choice(os.environ['SUBNETS'].split(","))
@@ -79,14 +75,12 @@ def create_file_system(event):
         ]
     )
     
-    # Temp disable tracking
     enable_event()
     
     return {
         'id': response['FileSystem']['FileSystemId']
     }
 
-# Method to get the status of file system
 def get_status(event):
     response = fsx_client.describe_file_systems(
         FileSystemIds=[
@@ -94,6 +88,7 @@ def get_status(event):
         ]
     )
     handleResponse(response)
+
     # add a check for the data repository
     data_repository_status = response['FileSystems'][0]['LustreConfiguration']['DataRepositoryConfiguration']['Lifecycle']
     if data_repository_status == 'MISCONFIGURED':
@@ -103,7 +98,6 @@ def get_status(event):
     else:
         return response['FileSystems'][0]['Lifecycle']
 
-# Method to delete file system
 def delete_file_system(event):
     response = fsx_client.delete_file_system(
         FileSystemId=event["file_system_id"]
@@ -121,7 +115,6 @@ def enable_event():
     else:
         print("No event rules found with prefix {}".format(EVENT_NAME_PREFIX))
 
-# # Generic method to handle response from API.
 def handleResponse(res):
     http_status_code = res['ResponseMetadata']['HTTPStatusCode']
     if http_status_code != 200:

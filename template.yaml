@@ -60,7 +60,7 @@ Resources:
         Variables:
           SUBNETS: !Ref Subnets
           SECURITY_GROUPS: !Ref SecurityGroups
-          event_name_prefix: ephemeral-fsx
+          EVENT_NAME_PREFIX: ephemeral-fsx
   
   MonitorFSxFunction:
     Type: AWS::Serverless::Function
@@ -89,11 +89,11 @@ Resources:
             Resource: '*'
       Environment:
         Variables:
-          sns_arn: !Ref MonitorFSxSnsTopic
-          data_points_period_secs: 60
-          metric_interval_mins: 60
-          event_name_prefix: ephemeral-fsx
-          claimed_time_mins: 60
+          SNS_ARN: !Ref MonitorFSxSnsTopic
+          DATA_POINTS_PERIOD_SECS: 60
+          METRIC_INTERVAL_MINS: 60
+          EVENT_NAME_PREFIX: ephemeral-fsx
+          CLAIMED_TIME_MINS: 60
 
   MonitorFSxRule: 
     Type: AWS::Events::Rule
