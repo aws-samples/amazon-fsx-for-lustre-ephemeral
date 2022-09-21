@@ -8,7 +8,7 @@ import datetime
 fsx_client      = boto3.client('fsx')
 event_client    = boto3.client('events')
 
-EVENT_NAME_PREFIX   = os.environ.get('event_name_prefix')
+EVENT_NAME_PREFIX   = os.environ.get('EVENT_NAME_PREFIX')
 
 def lambda_handler(event, context):
     print("Received Event: {}".format(event))
@@ -50,7 +50,7 @@ def create_file_system(event):
         StorageCapacity=4800,
         StorageType='SSD',
         SubnetIds=[str(subnet)],
-        # SecurityGroupIds=[security_group],
+        SecurityGroupIds=[security_group],
         Tags=[
             { 'Key': 'Name',        'Value': fsx_name},
             { 'Key': 'Ephemeral',   'Value': "true"},
