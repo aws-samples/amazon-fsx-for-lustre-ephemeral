@@ -116,6 +116,8 @@ Resources:
 
   MonitorFSxSnsTopic:
     Type: AWS::SNS::Topic
+    Properties:
+      KmsMasterKeyId: alias/aws/sns
 
   SnsSubscription:
     Type: AWS::SNS::Subscription
