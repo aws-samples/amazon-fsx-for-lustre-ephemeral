@@ -34,7 +34,7 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.9
       Timeout: 30
-      ReservedConcurrentExecutions: 0
+      ReservedConcurrentExecutions: 300
       Architectures:
         - x86_64
       Policies:
@@ -70,7 +70,7 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.9
       Timeout: 30
-      ReservedConcurrentExecutions: 0
+      ReservedConcurrentExecutions: 300
       Architectures:
         - x86_64
       Policies:
