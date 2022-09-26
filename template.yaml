@@ -34,6 +34,7 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.9
       Timeout: 30
+      ReservedConcurrentExecutions: 300
       Architectures:
         - x86_64
       Policies:
@@ -69,6 +70,7 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.9
       Timeout: 30
+      ReservedConcurrentExecutions: 300
       Architectures:
         - x86_64
       Policies:
@@ -116,6 +118,8 @@ Resources:
 
   MonitorFSxSnsTopic:
     Type: AWS::SNS::Topic
+    Properties:
+      KmsMasterKeyId: alias/aws/sns
 
   SnsSubscription:
     Type: AWS::SNS::Subscription
