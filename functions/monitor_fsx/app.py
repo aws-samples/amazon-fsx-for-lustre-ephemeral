@@ -1,6 +1,7 @@
+"""Lambda function to monitor the FSx file systems."""
 import os
+from datetime import datetime, timedelta, tzinfo
 import boto3
-from datetime import date, datetime, timedelta, tzinfo
 from botocore.exceptions import ClientError
 
 # -- Get all external configurable external variables --
@@ -30,7 +31,7 @@ def lambda_handler(event: dict, context: object):
     """
     try:
         print('Invocation event: %s', event)
-        
+
         storage_list: list = get_filesystems()
         print('File systems: %s', storage_list)
 
@@ -44,7 +45,7 @@ def lambda_handler(event: dict, context: object):
             claim_time: datetime = get_claim_time_in_minutes(storage)
             elapsed_time: datetime = get_minutes_elapsed_since_creation(storage)
             state: str = get_storage_lifecycle(storage)
-            
+
             if storage and determine_active_fsx(claim_time, elapsed_time, state):
                 # --  Determine total IOPs --
                 total_iops_values: float = get_total_iops(storage, start_time, end_time)
@@ -64,7 +65,7 @@ def lambda_handler(event: dict, context: object):
                 # -- Initiate a delete when average IOPS is 0. --
                 else:
                     print('Deleting FSx %s.', storage)
-                    response: dict = FSX_CLIENT.delete_file_system(FileSystemId=storage)
+                    FSX_CLIENT.delete_file_system(FileSystemId=storage)
 
                     # -- Send message to SNS topic --
                     send_email(storage, elapsed_time)
@@ -72,7 +73,7 @@ def lambda_handler(event: dict, context: object):
         post_check()
 
     except Exception as all_ex:
-        # -- Catches and raises all exceptions orchestrated by the handler. 
+        # -- Catches and raises all exceptions orchestrated by the handler.
         # Raises up exceptions caught and raised in helper methods. --
         print('Exception: %s', all_ex)
         raise all_ex
@@ -81,7 +82,7 @@ def get_filesystems() -> list:
     """A method to get available filesystems by tags via boto3 and pagination.
     Raises:
         rsc_tag_ex: Errors from the boto3 client.
-        key_ex: Python error when a key in a mapping is not found. 
+        key_ex: Python error when a key in a mapping is not found.
         val_ex: Python error when there exists a wrong value.
     Returns:
         list: filesystems
@@ -136,7 +137,7 @@ def get_minutes_elapsed_since_creation(storage: str) -> datetime:
         storage (str): The file system.
     Raises:
         fsx_ex: Errors from the boto3 client.
-        key_ex: Python error when a key in a mapping is not found. 
+        key_ex: Python error when a key in a mapping is not found.
         val_ex: Python error when there exists a wrong value.
     Returns:
         datetime: The elapsed time since creation.
@@ -176,7 +177,7 @@ def get_storage_lifecycle(storage: str) -> str:
         storage (str): The file system.
     Raises:
         fsx_ex: Errors from the boto3 client.
-        key_ex: Python error when a key in a mapping is not found. 
+        key_ex: Python error when a key in a mapping is not found.
     Returns:
         str: The lifecycle attribute.
     """
@@ -202,7 +203,7 @@ def get_claim_time_in_minutes(storage: str) -> datetime:
         storage (str): The file system.
     Raises:
         fsx_ex: Errors from the boto3 client.
-        key_ex: Python error when a key in a mapping is not found. 
+        key_ex: Python error when a key in a mapping is not found.
         val_ex: Python error when there exists a wrong value.
     Returns:
         datetime: The difference in time.
@@ -224,9 +225,11 @@ def get_claim_time_in_minutes(storage: str) -> datetime:
             claimed_time: datetime = datetime.strptime(claimed_time_string, '%Y-%m-%d %H:%M:%S.%f')
             diff_minutes: datetime = (time_now - claimed_time).total_seconds() / 60
             print('Claim Time Diff: %s', diff_minutes)
-            return diff_minutes
+
         else:
-            return CLAIMED_TIME_MINS + 5
+            diff_minutes = CLAIMED_TIME_MINS + 5
+
+        return diff_minutes
 
     except ClientError as fsx_ex:
         print('Client Error: %s', fsx_ex)
@@ -250,8 +253,8 @@ def send_email(storage: str, uptime: datetime):
         sns_ex: Errors from the boto3 client.
     """
     try:
-        message: str = f'No activity on FSx for Luster File System ID {storage} for {PERIOD} minutes.\
-            Delete has been initiated. Uptime: {uptime} mins.'
+        message: str = f'No activity on FSx for Luster File System ID {storage} for {PERIOD} \
+            minutes. Delete has been initiated. Uptime: {uptime} mins.'
 
         subject: str = f'Unused FSx for Lustre ID: {storage} deletion.'
 
@@ -385,7 +388,7 @@ def determine_active_fsx(claim_time: datetime, elapsed_time: datetime, state: st
 
 def post_check():
     """After the checks and possible clean-ups are complete, check for file systems
-       and events. If FSx do not exist, then clean up the event. 
+       and events. If FSx do not exist, then clean up the event.
     Raises:
         events_ex: Errors from the boto3 client.
         key_ex: Python error when a key in a mapping is not found.
@@ -394,7 +397,6 @@ def post_check():
         storage_list: list = get_filesystems()
         if storage_list:
             print('Existing file systems: %s', str(storage_list))
-            pass
 
         else:
             # -- Get all the event rules for the prefix --
