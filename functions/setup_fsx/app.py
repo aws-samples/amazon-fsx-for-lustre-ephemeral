@@ -28,13 +28,13 @@ def lambda_handler(event: dict, context: object):
         operation: str = event["operation"]
 
         if operation == "create":
-            create_file_system(event)
+            return create_file_system(event)
 
         if operation == "status":
-            get_status(event)
+            return get_status(event)
 
         if operation == "delete":
-            delete_file_system(event)
+            return delete_file_system(event)
 
     except Exception as ex:
         print(ex)

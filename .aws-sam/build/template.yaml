@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'ephemeral-fsx
+
+  Sample SAM Template for ephemeral-fsx-sam
+
+  '
+Parameters:
+  Subnets:
+    Type: String
+    Default: subnet-078e31a790c84ad74
+  SecurityGroups:
+    Type: String
+    Default: sg-0bb49119c420c94d6
+  NotificationEmail:
+    Type: String
+    Default: chirmb@amazon.com
+Resources:
+  EphemeralFSxStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: ../../statemachine/setup_fsx.asl.json
+      DefinitionSubstitutions:
+        SetupFSxFunctionArn:
+          Fn::GetAtt:
+          - SetupFSxFunction
+          - Arn
+      Policies:
+      - LambdaInvokePolicy:
+          FunctionName:
+            Ref: SetupFSxFunction
+  SetupFSxFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: SetupFSxFunction
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 30
+      ReservedConcurrentExecutions: 300
+      Architectures:
+      - x86_64
+      Policies:
+      - Statement:
+        - Sid: SetupFSxPermissions
+          Effect: Allow
+          Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - fsx:CreateFileSystem
+          - fsx:TagResource
+          - fsx:DescribeFileSystems
+          - events:ListRules
+          - events:EnableRule
+          - iam:CreateServiceLinkedRole
+          - kms:Decrypt
+          - s3:GetBucketPolicy
+          - s3:PutBucketPolicy
+          - s3:Get*
+          - s3:List*
+          - s3:PutObject
+          Resource: '*'
+      Environment:
+        Variables:
+          SUBNETS:
+            Ref: Subnets
+          SECURITY_GROUPS:
+            Ref: SecurityGroups
+          EVENT_NAME_PREFIX: ephemeral-fsx
+    Metadata:
+      SamResourceId: SetupFSxFunction
+  MonitorFSxFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: MonitorFSxFunction
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      Timeout: 30
+      ReservedConcurrentExecutions: 300
+      Architectures:
+      - x86_64
+      Policies:
+      - Statement:
+        - Sid: MonitorFSxPermissions
+          Effect: Allow
+          Action:
+          - tag:GetResources
+          - events:ListRules
+          - events:DisableRule
+          - kms:Decrypt
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - fsx:DescribeFileSystems
+          - fsx:DeleteFileSystem
+          - cloudwatch:GetMetricData
+          - SNS:Publish
+          Resource: '*'
+      Environment:
+        Variables:
+          SNS_ARN:
+            Ref: MonitorFSxSnsTopic
+          DATA_POINTS_PERIOD_SECS: 60
+          METRIC_INTERVAL_MINS: 60
+          EVENT_NAME_PREFIX: ephemeral-fsx
+          CLAIMED_TIME_MINS: 60
+    Metadata:
+      SamResourceId: MonitorFSxFunction
+  MonitorFSxRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: MonitorFSxRule
+      ScheduleExpression: rate(10 minutes)
+      State: DISABLED
+      Targets:
+      - Arn:
+          Fn::GetAtt:
+          - MonitorFSxFunction
+          - Arn
+        Id: MonitorFSxV1
+  MonitorFSxRulePermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: MonitorFSxFunction
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn:
+        Fn::GetAtt:
+        - MonitorFSxRule
+        - Arn
+  MonitorFSxSnsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      KmsMasterKeyId: alias/aws/sns
+  SnsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Ref: NotificationEmail
+      Protocol: email
+      TopicArn:
+        Ref: MonitorFSxSnsTopic
+Outputs:
+  EphemeralFSxStateMachine:
+    Description: Ephemeral FSx State machine ARN
+    Value:
+      Ref: EphemeralFSxStateMachine
