@@ -10,7 +10,7 @@ This project explains the solution for the blogpost whose title will be automate
 
 Run following command to setup this project.
 ```
-aws s3api create-bucket --bucket ephemeral-fsx-for-lustre-demo
+aws s3api create-bucket --bucket ephemeral-fsx-for-lustre-demo-<account_id>
 aws s3 cp sample-data/ s3://ephemeral-fsx-for-lustre-demo --recursive
 virtualenv venv --python=python3
 source venv/bin/activate
