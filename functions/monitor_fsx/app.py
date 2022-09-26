@@ -11,11 +11,11 @@ EVENT_NAME_PREFIX: str = os.environ.get('EVENT_NAME_PREFIX')
 CLAIMED_TIME_MINS: int = int(os.environ.get('CLAIMED_TIME_MINS'))
 
 # -- Boto3 clients --
-rsc_tag_client: object = boto3.client('resourcegroupstaggingapi')
-cw_client: object = boto3.client('cloudwatch')
-event_client: object = boto3.client('events')
-fsx_client: object = boto3.client('fsx')
-sns_client: object = boto3.client('sns')
+RSC_TAG_CLIENT: object = boto3.client('resourcegroupstaggingapi')
+CW_CLIENT: object = boto3.client('cloudwatch')
+EVENTS_CLIENT: object = boto3.client('events')
+FSX_CLIENT: object = boto3.client('fsx')
+SNS_CLIENT: object = boto3.client('sns')
 
 # -- Methods and logic --
 def lambda_handler(event: dict, context: object):
@@ -64,7 +64,7 @@ def lambda_handler(event: dict, context: object):
                 # -- Initiate a delete when average IOPS is 0. --
                 else:
                     print('Deleting FSx %s.', storage)
-                    response: dict = fsx_client.delete_file_system(FileSystemId=storage)
+                    response: dict = FSX_CLIENT.delete_file_system(FileSystemId=storage)
 
                     # -- Send message to SNS topic --
                     send_email(storage, elapsed_time)
@@ -87,7 +87,7 @@ def get_filesystems() -> list:
         list: filesystems
     """
     try:
-        fsx_paginator = rsc_tag_client.get_paginator('get_resources')
+        fsx_paginator = RSC_TAG_CLIENT.get_paginator('get_resources')
         fsx_iterator = fsx_paginator.paginate(
             TagFilters=[
                 {
@@ -142,7 +142,7 @@ def get_minutes_elapsed_since_creation(storage: str) -> datetime:
         datetime: The elapsed time since creation.
     """
     try:
-        response: dict = fsx_client.describe_file_systems(
+        response: dict = FSX_CLIENT.describe_file_systems(
             FileSystemIds=[
                 storage,
             ],
@@ -181,7 +181,7 @@ def get_storage_lifecycle(storage: str) -> str:
         str: The lifecycle attribute.
     """
     try:
-        response: dict = fsx_client.describe_file_systems(
+        response: dict = FSX_CLIENT.describe_file_systems(
             FileSystemIds=[
                 storage,
             ],
@@ -209,7 +209,7 @@ def get_claim_time_in_minutes(storage: str) -> datetime:
     """
     try:
         claimed_time_string: str = ""
-        response: dict = fsx_client.describe_file_systems(
+        response: dict = FSX_CLIENT.describe_file_systems(
             FileSystemIds=[
                 storage,
             ],
@@ -255,7 +255,7 @@ def send_email(storage: str, uptime: datetime):
 
         subject: str = f'Unused FSx for Lustre ID: {storage} deletion.'
 
-        sns_client.publish(
+        SNS_CLIENT.publish(
             TopicArn=SNS_TOPIC,
             Subject=subject,
             Message=message
@@ -277,7 +277,7 @@ def get_total_iops(storage: str, start_time: datetime, end_time: datetime) -> fl
         float: The Iops metric.
     """
     try:
-        response: dict = cw_client.get_metric_data(
+        response: dict = CW_CLIENT.get_metric_data(
             MetricDataQueries=[
                 {
                     'Id': 'm1',
@@ -398,7 +398,7 @@ def post_check():
 
         else:
             # -- Get all the event rules for the prefix --
-            response: dict = event_client.list_rules(
+            response: dict = EVENTS_CLIENT.list_rules(
                 NamePrefix=EVENT_NAME_PREFIX,
                 Limit=1
             )
@@ -406,7 +406,7 @@ def post_check():
             if 'Rules' in response:
                 event_name: str = response['Rules'][0]['Name']
                 print('Disabling event: %s', event_name)
-                event_client.disable_rule(Name=event_name)
+                EVENTS_CLIENT.disable_rule(Name=event_name)
 
             else:
                 print('No event rules found with prefix %s', EVENT_NAME_PREFIX)
