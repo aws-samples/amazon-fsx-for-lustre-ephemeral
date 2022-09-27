@@ -8,13 +8,13 @@ Description: >
 Parameters:
   Subnets:
     Type: String
-    Default: subnet-078e31a790c84ad74
+    Default: subnet-9320bXXX
   SecurityGroups:
     Type: String
-    Default: sg-0bb49119c420c94d6
+    Default: sg-061c0303e71aXXXXX
   NotificationEmail:
     Type: String
-    Default: chirmb@amazon.com
+    Default: emailaddress
     
 Resources:
   EphemeralFSxStateMachine:
