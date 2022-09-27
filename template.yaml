@@ -8,10 +8,13 @@ Description: >
 Parameters:
   Subnets:
     Type: String
+    Default: subnet-9320bXXX
   SecurityGroups:
     Type: String
+    Default: sg-061c0303e71aXXXXX
   NotificationEmail:
     Type: String
+    Default: emailaddress
     
 Resources:
   EphemeralFSxStateMachine:
