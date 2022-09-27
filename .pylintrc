@@ -156,7 +156,8 @@ disable=raw-checker-failed,
         use-symbolic-message-instead,
         unused-argument,
         invalid-name,
-        raising-format-tuple
+        raising-format-tuple,
+        inconsistent-return-statements
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

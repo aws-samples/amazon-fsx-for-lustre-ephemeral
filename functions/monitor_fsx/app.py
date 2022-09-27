@@ -1,8 +1,19 @@
 """Lambda function to monitor the FSx file systems."""
 import os
 from datetime import datetime, timedelta, tzinfo
+import logging
 import boto3
 from botocore.exceptions import ClientError
+
+# -- Init logging --
+logging.getLogger().handlers.clear()
+LOGGER = logging.getLogger('LOGGER')
+FORMAT = '%(asctime)s | %(levelname)s - %(message)s'
+FORMATTER = logging.Formatter(fmt=FORMAT)
+INFO_HANDLER = logging.StreamHandler()
+INFO_HANDLER.setFormatter(FORMATTER)
+LOGGER.addHandler(INFO_HANDLER)
+LOGGER.setLevel(logging.DEBUG)
 
 # -- Get all external configurable external variables --
 PERIOD: int = int(os.environ['DATA_POINTS_PERIOD_SECS'])
@@ -30,17 +41,17 @@ def lambda_handler(event: dict, context: object):
                 in helper methods.
     """
     try:
-        print('Invocation event: %s', event)
+        LOGGER.info('Invocation event: %s', event)
 
         storage_list: list = get_filesystems()
-        print('File systems: %s', storage_list)
+        LOGGER.info('File systems: %s', storage_list)
 
         start_time: datetime= datetime.utcnow() - timedelta(minutes=MERTIC_INTERVAL)
         end_time: datetime = datetime.utcnow()
 
         for storage in storage_list:
             # REVIEW
-            print('Checking file system: %s.', storage)
+            LOGGER.info('Checking file system: %s.', storage)
 
             claim_time: datetime = get_claim_time_in_minutes(storage)
             elapsed_time: datetime = get_minutes_elapsed_since_creation(storage)
@@ -56,7 +67,7 @@ def lambda_handler(event: dict, context: object):
                 else:
                     average_iops: float = 0.0
 
-                print('Average IOPS for %s is: %s.', storage, average_iops)
+                LOGGER.info('Average IOPS for %s is: %s.', storage, average_iops)
 
                 # -- 0.35 is average threashold when FSx is not being used. --
                 if average_iops >= 0.40:
@@ -64,7 +75,7 @@ def lambda_handler(event: dict, context: object):
 
                 # -- Initiate a delete when average IOPS is 0. --
                 else:
-                    print('Deleting FSx %s.', storage)
+                    LOGGER.info('Deleting FSx %s.', storage)
                     FSX_CLIENT.delete_file_system(FileSystemId=storage)
 
                     # -- Send message to SNS topic --
@@ -75,7 +86,7 @@ def lambda_handler(event: dict, context: object):
     except Exception as all_ex:
         # -- Catches and raises all exceptions orchestrated by the handler.
         # Raises up exceptions caught and raised in helper methods. --
-        print('Exception: %s', all_ex)
+        LOGGER.error('Exception: %s', all_ex)
         raise all_ex
 
 def get_filesystems() -> list:
@@ -120,15 +131,15 @@ def get_filesystems() -> list:
         return fs_list
 
     except ClientError as rsc_tag_ex:
-        print('Client Error: %s', rsc_tag_ex)
+        LOGGER.error('Client Error: %s', rsc_tag_ex)
         raise rsc_tag_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
     except ValueError as val_ex:
-        print('Value Error: %s', val_ex)
+        LOGGER.error('Value Error: %s', val_ex)
         raise val_ex
 
 def get_minutes_elapsed_since_creation(storage: str) -> datetime:
@@ -155,19 +166,19 @@ def get_minutes_elapsed_since_creation(storage: str) -> datetime:
 
         difference: datetime = present_time - creation_time
         elapsed: datetime = difference.seconds / 60
-        print('Time elapsed since creation: %s mins', elapsed)
+        LOGGER.info('Time elapsed since creation: %s mins', elapsed)
         return elapsed
 
     except ClientError as fsx_ex:
-        print('Client Error: %s', fsx_ex)
+        LOGGER.error('Client Error: %s', fsx_ex)
         raise fsx_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
     except ValueError as val_ex:
-        print('Value Error: %s', val_ex)
+        LOGGER.error('Value Error: %s', val_ex)
         raise val_ex
 
 def get_storage_lifecycle(storage: str) -> str:
@@ -190,11 +201,11 @@ def get_storage_lifecycle(storage: str) -> str:
         return response['FileSystems'][0]['Lifecycle']
 
     except ClientError as fsx_ex:
-        print('Client Error: %s', fsx_ex)
+        LOGGER.error('Client Error: %s', fsx_ex)
         raise fsx_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
 def get_claim_time_in_minutes(storage: str) -> datetime:
@@ -224,7 +235,7 @@ def get_claim_time_in_minutes(storage: str) -> datetime:
             time_now: datetime = datetime.strptime(str(datetime.now()), '%Y-%m-%d %H:%M:%S.%f')
             claimed_time: datetime = datetime.strptime(claimed_time_string, '%Y-%m-%d %H:%M:%S.%f')
             diff_minutes: datetime = (time_now - claimed_time).total_seconds() / 60
-            print('Claim Time Diff: %s', diff_minutes)
+            LOGGER.info('Claim Time Diff: %s', diff_minutes)
 
         else:
             diff_minutes = CLAIMED_TIME_MINS + 5
@@ -232,15 +243,15 @@ def get_claim_time_in_minutes(storage: str) -> datetime:
         return diff_minutes
 
     except ClientError as fsx_ex:
-        print('Client Error: %s', fsx_ex)
+        LOGGER.error('Client Error: %s', fsx_ex)
         raise fsx_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
     except ValueError as val_ex:
-        print('Value Error: %s', val_ex)
+        LOGGER.error('Value Error: %s', val_ex)
         raise val_ex
 
 def send_email(storage: str, uptime: datetime):
@@ -264,7 +275,7 @@ def send_email(storage: str, uptime: datetime):
             Message=message
         )
     except ClientError as sns_ex:
-        print('Client Error: %s', sns_ex)
+        LOGGER.error('Client Error: %s', sns_ex)
         raise sns_ex
 
 def get_total_iops(storage: str, start_time: datetime, end_time: datetime) -> float:
@@ -355,11 +366,11 @@ def get_total_iops(storage: str, start_time: datetime, end_time: datetime) -> fl
         return response['MetricDataResults'][0]['Values']
 
     except ClientError as cw_ex:
-        print('Client Error: %s', cw_ex)
+        LOGGER.error('Client Error: %s', cw_ex)
         raise cw_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
 def determine_active_fsx(claim_time: datetime, elapsed_time: datetime, state: str) -> bool:
@@ -396,7 +407,7 @@ def post_check():
     try:
         storage_list: list = get_filesystems()
         if storage_list:
-            print('Existing file systems: %s', str(storage_list))
+            LOGGER.info('Existing file systems: %s', str(storage_list))
 
         else:
             # -- Get all the event rules for the prefix --
@@ -407,16 +418,16 @@ def post_check():
 
             if 'Rules' in response:
                 event_name: str = response['Rules'][0]['Name']
-                print('Disabling event: %s', event_name)
+                LOGGER.info('Disabling event: %s', event_name)
                 EVENTS_CLIENT.disable_rule(Name=event_name)
 
             else:
-                print('No event rules found with prefix %s', EVENT_NAME_PREFIX)
+                LOGGER.info('No event rules found with prefix %s', EVENT_NAME_PREFIX)
 
     except ClientError as events_ex:
-        print('Client Error: %s', events_ex)
+        LOGGER.error('Client Error: %s', events_ex)
         raise events_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex

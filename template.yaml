@@ -29,7 +29,7 @@ Resources:
     Properties:
       CodeUri: functions/setup_fsx/
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       Timeout: 30
       ReservedConcurrentExecutions: 300
       Architectures:
@@ -65,7 +65,7 @@ Resources:
     Properties:
       CodeUri: functions/monitor_fsx/
       Handler: app.lambda_handler
-      Runtime: python3.8
+      Runtime: python3.9
       Timeout: 30
       ReservedConcurrentExecutions: 300
       Architectures:

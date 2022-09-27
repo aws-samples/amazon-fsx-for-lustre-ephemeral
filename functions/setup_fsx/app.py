@@ -2,8 +2,19 @@
 import os
 import random
 import datetime
+import logging
 import boto3
 from botocore.exceptions import ClientError
+
+# -- Init logging --
+logging.getLogger().handlers.clear()
+LOGGER = logging.getLogger('LOGGER')
+FORMAT = '%(asctime)s | %(levelname)s - %(message)s'
+FORMATTER = logging.Formatter(fmt=FORMAT)
+INFO_HANDLER = logging.StreamHandler()
+INFO_HANDLER.setFormatter(FORMATTER)
+LOGGER.addHandler(INFO_HANDLER)
+LOGGER.setLevel(logging.DEBUG)
 
 ## -- Global Boto3 clients --
 FSX_CLIENT: object = boto3.client('fsx')
@@ -21,8 +32,8 @@ def lambda_handler(event: dict, context: object):
     Raises:
         ex: All exceptions in the handler and in helper methods.
     """
-    print('Invocation event: %s', event)
-    print('Using boto3 version %s', boto3.__version__)
+    LOGGER.info('Invocation event: %s', event)
+    LOGGER.info('Using boto3 version %s', boto3.__version__)
 
     try:
         operation: str = event["operation"]
@@ -37,7 +48,7 @@ def lambda_handler(event: dict, context: object):
             return delete_file_system(event)
 
     except Exception as ex:
-        print(ex)
+        LOGGER.error(ex)
         raise ex
 
 def create_file_system(event) -> dict:
@@ -55,7 +66,7 @@ def create_file_system(event) -> dict:
         # -- Get subnet IDs from environment variables --
         subnet: str = random.choice(os.environ['SUBNETS'].split(","))
         security_group: str = random.choice(os.environ['SECURITY_GROUPS'].split(","))
-        print('Using subnet (%s) and Security group (%s).', subnet, security_group)
+        LOGGER.info('Using subnet (%s) and Security group (%s).', subnet, security_group)
 
         import_path: str = f's3://{event["bucket"]}/{event["team"]}'
         fsx_name: str = f'{event["team"]}-{event["bucket"]}'
@@ -99,15 +110,15 @@ def create_file_system(event) -> dict:
         }
 
     except ClientError as fsx_ex:
-        print('Client Error: %s', fsx_ex)
+        LOGGER.error('Client Error: %s', fsx_ex)
         raise fsx_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
     except ValueError as val_ex:
-        print('Value Error: %s', val_ex)
+        LOGGER.error('Value Error: %s', val_ex)
         raise val_ex
 
 def get_status(event: dict) -> str:
@@ -134,11 +145,11 @@ def get_status(event: dict) -> str:
         return status
 
     except ClientError as fsx_ex:
-        print('Client Error: %s', fsx_ex)
+        LOGGER.error('Client Error: %s', fsx_ex)
         raise fsx_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
 def delete_file_system(event: dict) -> str:
@@ -161,11 +172,11 @@ def delete_file_system(event: dict) -> str:
         return response['Lifecycle']
 
     except ClientError as fsx_ex:
-        print('Client Error: %s', fsx_ex)
+        LOGGER.error('Client Error: %s', fsx_ex)
         raise fsx_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
 def enable_event():
@@ -180,18 +191,18 @@ def enable_event():
 
         if response['Rules']:
             event_name: str = response['Rules'][0]['Name']
-            print('Enabling event: %s', event_name)
+            LOGGER.info('Enabling event: %s', event_name)
             EVENTS_CLIENT.enable_rule(Name=event_name)
 
         else:
-            print('No event rules found with prefix %s.', EVENT_NAME_PREFIX)
+            LOGGER.info('No event rules found with prefix %s.', EVENT_NAME_PREFIX)
 
     except ClientError as event_ex:
-        print('Client Error: %s', event_ex)
+        LOGGER.error('Client Error: %s', event_ex)
         raise event_ex
 
     except KeyError as key_ex:
-        print('Key Error: %s', key_ex)
+        LOGGER.error('Key Error: %s', key_ex)
         raise key_ex
 
 def handleResponse(res: dict):
