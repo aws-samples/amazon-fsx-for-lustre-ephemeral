@@ -1,0 +1,5 @@
+# Setup and SAM files #
+#######################
+.aws-sam/
+env/
+samconfig.toml

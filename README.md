@@ -10,8 +10,8 @@ This project explains the solution for the blogpost whose title will be automate
 
 Run following command to setup this project.
 ```
-aws s3api create-bucket --bucket ephemeral-fsx-for-lustre-demo
-aws s3 cp sample-data/ s3://ephemeral-fsx-for-lustre-demo --recursive
+aws s3api create-bucket --bucket ephemeral-fsx-for-lustre-demo-<account_id>
+aws s3 cp sample-data/ s3://ephemeral-fsx-for-lustre-demo-<account_id> --recursive
 virtualenv venv --python=python3
 source venv/bin/activate
 sam build
@@ -36,6 +36,8 @@ Execute following command and provide input as `y` to cleanup all the resources
 ```
 sam delete
 ```
+
+AND S3 Clean-up
 
 > Also make sure to delete any FSx file systems if left out.
 
