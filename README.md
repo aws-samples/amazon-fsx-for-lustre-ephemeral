@@ -29,16 +29,15 @@ Execute step function with below input
   "phase":"<phase>"
 }
 ```
-`team`: Team name paramater can be provided to share the FSx across multiple use cases within the same team. This refers to the architecture diagram in the blog. 
+`team`: Team name parameters can be provided to share the FSx across multiple use cases within the same team. This refers to the architecture diagram in the blog. 
 
-`bucket`: Bucket can be existing bucket or you can use above instructions to create it. This bucket needs to be have data that can be made available on FSx for validation purpose. 
+`bucket`: Bucket can be an existing bucket or you can use above instructions to create it. This bucket needs to have data that can be made available on FSx for validation purposes. 
 
-`phase`: Phase is a part of machine learning process where you can share the file systems between 2 models in train or predict phase within same team. 
+`phase`: Phase is a part of the machine learning process where you can share the file systems between 2 models in train or predict phase within the same team. 
 
-> This solution uses these parameters to calculate the name of the FSx file system so make sure you proivide unique names. 
+> This solution uses these parameters to calculate the name of the FSx file system so make sure you provide unique names. 
 
 > All these parameters were introduced to enable FSx sharing between team for different models and phases. Not necessarily you have to follow the same approach but this is just an example to provide a bigger context about the use case.
-
 
 # Cleanup
 
