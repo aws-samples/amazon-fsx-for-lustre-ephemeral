@@ -3,7 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   ephemeral-fsx
 
-  Sample SAM Template for ephemeral-fsx-sam
+  Sample SAM Template for ephemeral-fsx-sam (qs-1tjjqee5q)
 
 Parameters:
   Subnets:
